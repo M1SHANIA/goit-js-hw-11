@@ -1,4 +1,4 @@
-//Імпортуємо модулі та стилі
+// Імпортуємо модулі та стилі
 import './js/pixabay-api.js';
 import './js/render-functions.js';
 
@@ -14,12 +14,15 @@ import { createGallery } from './js/render-functions';
 const galleryContainer = document.querySelector('.gallery');
 const searchForm = document.querySelector('.search-form');
 const loaderContainer = document.querySelector('.loader');
-const resultInfo = document.querySelector('.result-info');
+const searchResultMessage = document.querySelector('.result-info');
 
 // Додаємо обробник події для форми пошуку
 searchForm.addEventListener('submit', function (event) {
     event.preventDefault();
     const queryInput = event.target.elements.query.value.trim(); // Вилучаємо пробіли з початку і кінця рядка
+
+    // Додаємо відображення індикатора завантаження перед відправленням запиту
+    loaderContainer.style.display = 'block';
 
     // Валідація мінімальної довжини пошукового запиту
     if (queryInput.length < 3) {
@@ -29,12 +32,14 @@ searchForm.addEventListener('submit', function (event) {
             message: 'Please enter a search query with at least 3 characters.',
             position: 'topRight',
         });
+        // Приховуємо індикатор завантаження у випадку невалідного вводу
+        loaderContainer.style.display = 'none';
         return;
     }
 
     // Очищення HTML галереї перед новим пошуком
     galleryContainer.innerHTML = '';
-    resultInfo.innerHTML = ''; // Очищення інформації про результат перед новим пошуком
+    searchResultMessage.innerHTML = ''; // Очищення інформації про результат перед новим пошуком
 
     // Ініціалізація SimpleLightbox тут, якщо потрібно, щоб гарантувати, що галерея буде готова до відображення
     const lightbox = new SimpleLightbox(`.${GALLERY_LINK}`);
@@ -42,34 +47,33 @@ searchForm.addEventListener('submit', function (event) {
     // Відправка запиту на сервер і обробка результату
     fetchImages(queryInput)
         .then(({ hits }) => {
+            // Після отримання результату приховуємо індикатор завантаження
+            loaderContainer.style.display = 'none';
+
             if (hits.length > 0) {
                 // Виведення зображень в галерею
                 const galleryHTML = hits.map(createGallery).join('');
                 galleryContainer.innerHTML = galleryHTML;
 
                 // Виведення інформації про результат
-                // resultInfo.innerHTML = `<p class="result-messages">${hits.length} images found for "${queryInput}"</p>`;
-                resultInfo.innerHTML = `<p class="result-messages">Loading images, please wait...</p>`;
+                searchResultMessage.innerHTML = `<p class="result-messages">${hits.length} images found for "${queryInput}"</p>`;
 
                 // Оновлення SimpleLightbox
                 lightbox.refresh();
-
-                // Закриття інформації про результат через 5 секунд
-                setTimeout(() => {
-                    resultInfo.innerHTML = '';
-                }, 2000);
             } else {
                 // Відображення повідомлення про відсутність результатів
-                // resultInfo.innerHTML = '<p class="no-results-message">No images found.</p>';
-                resultInfo.innerHTML = '<p class="no-results-message">No images found.</p>';
-
-                setTimeout(() => {
-                    resultInfo.innerHTML = '';
-                }, 5000);
-
+                searchResultMessage.innerHTML = '<p class="no-results-message">No images found.</p>';
             }
+
+            // Закриття інформації про результат через 5 секунд
+            setTimeout(() => {
+                searchResultMessage.innerHTML = '';
+            }, 5000);
         })
         .catch((error) => {
+            // Приховуємо індикатор завантаження у випадку помилки
+            loaderContainer.style.display = 'none';
+
             console.error('Error fetching images:', error);
 
             // Використання iziToast для відображення помилки користувачу
@@ -80,8 +84,7 @@ searchForm.addEventListener('submit', function (event) {
             });
         })
         .finally(() => {
-            // Приховання індікатора завантаження та очищення форми
-            loaderContainer.style.display = 'none';
+            // Приховання індикатора завантаження та очищення форми
             searchForm.reset();
         });
 });
